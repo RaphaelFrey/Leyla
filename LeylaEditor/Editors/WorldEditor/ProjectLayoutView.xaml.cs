@@ -1,6 +1,9 @@
-﻿using LeylaEditor.GameProject;
+﻿using System.Linq;
+using LeylaEditor.GameProject;
 using System.Windows;
 using System.Windows.Controls;
+using LeylaEditor.Components;
+using LeylaEditor.Utilities;
 
 
 namespace LeylaEditor.Editors
@@ -13,6 +16,40 @@ namespace LeylaEditor.Editors
 		public ProjectLayoutView()
 		{
 			InitializeComponent();
+		}
+
+		private void OnAddGameEntity_Button_Click(object sender, RoutedEventArgs e)
+		{
+			var btn = sender as Button;
+			var vm = btn.DataContext as Scene;
+			vm.AddGameEntityCommand.Execute(new GameEntity(vm) {Name = "Empty Game Entity"});
+		}
+
+		private void OnGameEntities_ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			GameEntityView.Instance.DataContext = null;
+			if (e.AddedItems.Count > 0)
+			{
+				GameEntityView.Instance.DataContext = (sender as ListBox).SelectedItems[0];
+			}
+			var listBox = sender as ListBox;
+			var newSelection = listBox.SelectedItems.Cast<GameEntity>().ToList();
+			var previousSelection = newSelection.Except(e.AddedItems.Cast<GameEntity>()).Concat(e.RemovedItems.Cast<GameEntity>()).ToList();
+			
+			Project.UndoRedo.Add(new UndoRedoAction(
+				() =>
+				{
+					listBox.UnselectAll();
+					previousSelection.ForEach(x => (listBox.ItemContainerGenerator.ContainerFromItem(x) as ListBoxItem).IsSelected = true);
+					
+				},
+				() =>
+				{
+					listBox.UnselectAll();
+					newSelection.ForEach(x => (listBox.ItemContainerGenerator.ContainerFromItem(x) as ListBoxItem).IsSelected = true);
+				},
+				"Selection changed"
+				));
 		}
 	}
 }
