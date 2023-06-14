@@ -3,8 +3,10 @@ using System.Runtime.Serialization;
 
 namespace LeylaEditor.Components;
 
+public interface IMSComponent {}
+
 [DataContract]
-public class Component : ViewModelBase
+public abstract class Component : ViewModelBase
 {
     [DataMember]
     public GameEntity Owner { get; set; }
@@ -13,4 +15,9 @@ public class Component : ViewModelBase
         Debug.Assert(entity != null);
         Owner = entity;
     }
+}
+
+public abstract class MSComponent<T> : ViewModelBase, IMSComponent where T : Component
+{
+    
 }

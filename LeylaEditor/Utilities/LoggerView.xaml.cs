@@ -8,12 +8,6 @@ public partial class LoggerView : UserControl
     public LoggerView()
     {
         InitializeComponent();
-        Loaded += (s, e) =>
-        {
-            Logger.Log(MessageType.Info, "Information message");
-            Logger.Log(MessageType.Warning, "Warning message");
-            Logger.Log(MessageType.Error, "Error message");
-        };
     }
 
     private void OnClear_Button_Click(object sender, RoutedEventArgs e)

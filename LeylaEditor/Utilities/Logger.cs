@@ -39,7 +39,7 @@ public class LogMessage
 public static class Logger
 {
     private static int _messageFilter = (int)(MessageType.Info | MessageType.Warning | MessageType.Error);
-    private static ObservableCollection<LogMessage> _messages = new();
+    private static readonly ObservableCollection<LogMessage> _messages = new();
     public static ReadOnlyObservableCollection<LogMessage> Messages { get; } = new(_messages);
     public static CollectionViewSource FilteredMessages { get; } = new() { Source = Messages };
 
