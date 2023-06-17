@@ -8,7 +8,7 @@ using LeylaEditor.Utilities;
 namespace LeylaEditor.GameProject
 {
     [DataContract]
-	public class Scene : ViewModelBase
+	internal class Scene : ViewModelBase
 	{
         private string _name;
         [DataMember]
@@ -48,15 +48,24 @@ namespace LeylaEditor.GameProject
         public ICommand AddGameEntityCommand { get; set; }
         public ICommand RemoveGameEntityCommand { get; set; }
 
-        private void AddGameEntity(GameEntity entity)
+        private void AddGameEntity(GameEntity entity, int index = -1)
         {
             Debug.Assert(!_gameEntities.Contains(entity));
-            _gameEntities.Add(entity);
+            entity.IsActive = IsActive;
+            if (index == -1)
+            {
+                _gameEntities.Add(entity);
+            }
+            else
+            {
+                _gameEntities.Insert(index, entity);
+            }
         }
         
         private void RemoveEntity(GameEntity entity)
         {
             Debug.Assert(_gameEntities.Contains(entity));
+            entity.IsActive = false;
             _gameEntities.Remove(entity);
         }
 
@@ -69,6 +78,11 @@ namespace LeylaEditor.GameProject
                 OnPropertyChanged(nameof(GameEntities));
             }
 
+            foreach (var entity in _gameEntities)
+            {
+                entity.IsActive = IsActive;
+            }
+
             AddGameEntityCommand = new RelayCommand<GameEntity>(x =>
             {
                 AddGameEntity(x);
@@ -76,7 +90,7 @@ namespace LeylaEditor.GameProject
 
                 Project.UndoRedo.Add(new UndoRedoAction(
                     () => RemoveEntity(x),
-                    () => _gameEntities.Insert(entityIndex, x),
+                    () => AddGameEntity(x, entityIndex),
                     $"Add {x.Name} to {Name}"));
             });
 
@@ -86,7 +100,7 @@ namespace LeylaEditor.GameProject
                 RemoveEntity(x);
 
                 Project.UndoRedo.Add(new UndoRedoAction(
-                    () => _gameEntities.Insert(entityIndex, x),
+                    () => AddGameEntity(x, entityIndex),
                     () => RemoveEntity(x),
                     $"Remove {x.Name} from {Name}"));
             });

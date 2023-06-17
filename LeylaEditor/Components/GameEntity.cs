@@ -1,5 +1,4 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -13,10 +12,9 @@ namespace LeylaEditor.Components;
 
 [DataContract]
 [KnownType(typeof(Transform))]
-public class GameEntity : ViewModelBase
+internal class GameEntity : ViewModelBase
 {
     private int _entityId = ID.INVALID_ID;
-
     public int EntityId
     {
         get => _entityId;
@@ -31,7 +29,6 @@ public class GameEntity : ViewModelBase
     }
 
     private bool _isActive;
-
     public bool IsActive
     {
         get => _isActive;
@@ -40,20 +37,23 @@ public class GameEntity : ViewModelBase
             if (_isActive != value)
             {
                 _isActive = value;
-                if (_isActive)
+                if(_isActive)
                 {
                     EntityId = EngineAPI.CreateGameEntity(this);
                     Debug.Assert(ID.IsValid(_entityId));
                 }
-                else
+                else if(ID.IsValid(EntityId))
                 {
                     EngineAPI.RemoveGameEntity(this);
+                    EntityId = ID.INVALID_ID;
                 }
+
                 OnPropertyChanged(nameof(IsActive));
             }
         }
     }
-    
+
+
     private bool _isEnabled = true;
     [DataMember]
     public bool IsEnabled
@@ -68,6 +68,7 @@ public class GameEntity : ViewModelBase
             }
         }
     }
+
     private string _name;
     [DataMember]
     public string Name
@@ -82,27 +83,27 @@ public class GameEntity : ViewModelBase
             }
         }
     }
-    
+
     [DataMember]
-    public Scene ParentScene { get; set; }
-    
+    public Scene ParentScene { get; private set; }
+
     [DataMember(Name = nameof(Components))]
-    private readonly ObservableCollection<Component> _components = new();
+    private readonly ObservableCollection<Component> _components = new ObservableCollection<Component>();
     public ReadOnlyObservableCollection<Component> Components { get; private set; }
 
     public Component GetComponent(Type type) => Components.FirstOrDefault(c => c.GetType() == type);
     public T GetComponent<T>() where T : Component => GetComponent(typeof(T)) as T;
 
     [OnDeserialized]
-    private void OnDeserialized(StreamingContext context)
+    void OnDeserialized(StreamingContext context)
     {
-        if (_components != null)
+        if(_components != null)
         {
             Components = new ReadOnlyObservableCollection<Component>(_components);
             OnPropertyChanged(nameof(Components));
         }
-    } 
-    
+    }
+
     public GameEntity(Scene scene)
     {
         Debug.Assert(scene != null);
@@ -112,14 +113,11 @@ public class GameEntity : ViewModelBase
     }
 }
 
-public abstract class MSEntity : ViewModelBase
+internal abstract class MSEntity : ViewModelBase
 {
-    /// <summary>
-    /// Enables updates to selected entities
-    /// </summary>
+    // Enables updates to selected entities
     private bool _enableUpdates = true;
     private bool? _isEnabled;
-
     public bool? IsEnabled
     {
         get => _isEnabled;
@@ -134,7 +132,6 @@ public abstract class MSEntity : ViewModelBase
     }
 
     private string _name;
-
     public string Name
     {
         get => _name;
@@ -148,9 +145,76 @@ public abstract class MSEntity : ViewModelBase
         }
     }
 
-    private readonly ObservableCollection<IMSComponent> _components = new();
+    private readonly ObservableCollection<IMSComponent> _components = new ObservableCollection<IMSComponent>();
     public ReadOnlyObservableCollection<IMSComponent> Components { get; }
+
+    public T GetMSComponent<T>() where T : IMSComponent
+    {
+        return (T)Components.FirstOrDefault(x => x.GetType() == typeof(T));
+    }
+
     public List<GameEntity> SelectedEntities { get; }
+
+    private void MakeComponentList()
+    {
+        _components.Clear();
+        var firstEntity = SelectedEntities.FirstOrDefault();
+        if (firstEntity == null) return;
+
+        foreach (var component in firstEntity.Components)
+        {
+            var type = component.GetType();
+            if(!SelectedEntities.Skip(1).Any(entity=>entity.GetComponent(type) == null))
+            {
+                Debug.Assert(Components.FirstOrDefault(x => x.GetType() == type) == null);
+                _components.Add(component.GetMultiselectionComponent(this));
+            }
+        }
+    }
+
+    public static float? GetMixedValue<T>(List<T> objects, Func<T, float> getProperty)
+    {
+        var value = getProperty(objects.First());
+        return objects.Skip(1).Any(x => !getProperty(x).IsTheSameAs(value)) ? (float?)null : value;
+    }
+
+    public static bool? GetMixedValue<T>(List<T> objects, Func<T, bool> getProperty)
+    {
+        var value = getProperty(objects.First());
+        return objects.Skip(1).Any(x => value != getProperty(x)) ? (bool?)null : value;
+    }
+
+    public static string GetMixedValue<T>(List<T> objects, Func<T, string> getProperty)
+    {
+        var value = getProperty(objects.First());
+        return objects.Skip(1).Any(x => value != getProperty(x)) ? null : value;
+    }
+
+    protected virtual bool UpdateGameEntities(string propertyName)
+    {
+        switch (propertyName)
+        {
+            case nameof(IsEnabled): SelectedEntities.ForEach(x => x.IsEnabled = IsEnabled.Value); return true;
+            case nameof(Name): SelectedEntities.ForEach(x => x.Name = Name); return true;
+        }
+        return false;
+    }
+
+    protected virtual bool UpdateMSGameEntity()
+    {
+        IsEnabled = GetMixedValue(SelectedEntities, new Func<GameEntity, bool>(x => x.IsEnabled));
+        Name = GetMixedValue(SelectedEntities, new Func<GameEntity, string>(x => x.Name));
+
+        return true;
+    }
+
+    public void Refresh()
+    {
+        _enableUpdates = false;
+        UpdateMSGameEntity();
+        MakeComponentList();
+        _enableUpdates = true;
+    }
 
     public MSEntity(List<GameEntity> entities)
     {
@@ -159,72 +223,9 @@ public abstract class MSEntity : ViewModelBase
         SelectedEntities = entities;
         PropertyChanged += (s, e) => { if(_enableUpdates) UpdateGameEntities(e.PropertyName); };
     }
-        
-    protected virtual bool UpdateGameEntities(string PropertyName)
-    {
-        switch (PropertyName)
-        {
-            case nameof(IsEnabled): SelectedEntities.ForEach(x => x.IsEnabled = IsEnabled.Value); return true;
-            case nameof(Name): SelectedEntities.ForEach(x => x.Name = Name); return true;
-        }
-        return false;
-    }
-
-    public static float? GetMixedValue(List<GameEntity> entities, Func<GameEntity, float> getProperty)
-    {
-        var value = getProperty(entities.First());
-        foreach (var entity in entities.Skip(1))
-        {
-            if (value.IsTheSameAs(getProperty(entity)))
-            {
-                return null;
-            }
-        }
-        return value;
-    }
-    
-    public static bool? GetMixedValue(List<GameEntity> entities, Func<GameEntity, bool> getProperty)
-    {
-        var value = getProperty(entities.First());
-        foreach (var entity in entities.Skip(1))
-        {
-            if (value != getProperty(entity))
-            {
-                return null;
-            }
-        }
-        return value;
-    }
-    
-    public static string GetMixedValue(List<GameEntity> entities, Func<GameEntity, string> getProperty)
-    {
-        var value = getProperty(entities.First());
-        foreach (var entity in entities.Skip(1))
-        {
-            if (value != getProperty(entity))
-            {
-                return null;
-            }
-        }
-        return value;
-    }
-
-    protected virtual bool UpdateMSGameEntity()
-    {
-        IsEnabled = GetMixedValue(SelectedEntities, new Func<GameEntity, bool>(x => x.IsEnabled));
-        Name = GetMixedValue(SelectedEntities, new Func<GameEntity, string>(x => x.Name));
-        return true;
-    }
-
-    public void Refresh()
-    {
-        _enableUpdates = false;
-        UpdateMSGameEntity();
-        _enableUpdates = true;
-    }
 }
 
-public class MSGameEntity : MSEntity
+internal class MSGameEntity : MSEntity
 {
     public MSGameEntity(List<GameEntity> entities) : base(entities)
     {

@@ -23,7 +23,7 @@ namespace LeylaEditor.EngineAPIStructs
 
 namespace LeylaEditor.DLLWrapper
 {
-    public static class EngineAPI
+    internal static class EngineAPI
     {
         private const string _dllName = "EngineDLL.dll";
 

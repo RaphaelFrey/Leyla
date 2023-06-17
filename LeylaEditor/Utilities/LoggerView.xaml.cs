@@ -20,7 +20,7 @@ public partial class LoggerView : UserControl
         var filter = 0x0;
         if (toggleInfo.IsChecked == true) filter |= (int)MessageType.Info;
         if (toggleWarnings.IsChecked == true) filter |= (int)MessageType.Warning;
-        if (toggleError.IsChecked == true) filter |= (int)MessageType.Error;
+        if (toggleErrors.IsChecked == true) filter |= (int)MessageType.Error;
         Logger.SetMessageFilter(filter);
     }
 }
