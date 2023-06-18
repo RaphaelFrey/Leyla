@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using LeylaEditor.GameDev;
 
 namespace LeylaEditor.Editors;
 
@@ -18,5 +19,10 @@ public partial class WorldEditorView : UserControl
     {
         Loaded -= OnWorldEditorViewLoaded;
         Focus();
+    }
+
+    private void OnNewScript_Button_Click(object sender, RoutedEventArgs e)
+    {
+        new NewScriptDialog().ShowDialog();
     }
 }

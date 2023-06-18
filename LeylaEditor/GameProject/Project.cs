@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Windows;
 using System.Windows.Input;
+using LeylaEditor.GameDev;
 
 namespace LeylaEditor.GameProject
 {
@@ -17,7 +18,8 @@ namespace LeylaEditor.GameProject
         public string Name { get; private set; } = "New Project";
 		[DataMember]
 		public string Path { get; private set; }
-        public string FullPath => $@"{Path}{Name}\{Name}{Extension}";
+        public string FullPath => $@"{Path}{Name}{Extension}";
+        public string Solution => $@"{Path}{Name}.sln";
 		[DataMember(Name = "Scenes")]
 		private ObservableCollection<Scene> _scenes = new();
         public ReadOnlyObservableCollection<Scene> Scenes { get; private set; }
@@ -72,6 +74,7 @@ namespace LeylaEditor.GameProject
 
 		public void Unload()
         {
+            VisualStudio.CloseVisualStudio();
             UndoRedo.Reset();
         }
 

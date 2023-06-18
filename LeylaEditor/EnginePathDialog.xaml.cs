@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace LeylaEditor;
 
@@ -36,5 +37,13 @@ public partial class EnginePathDialog : Window
             DialogResult = true;
             Close();
         }
+    }
+
+    private void OnScriptName_TextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+    }
+
+    private void OnScriptPath_TextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
     }
 }
