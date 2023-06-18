@@ -55,7 +55,7 @@ namespace leyla
 #define REGISTER_SCRIPT(TYPE)                                                                       \
         class TYPE;                                                                                 \
         namespace {                                                                                 \
-            const u8 _reg##TYPE{ leyla::script::detail::register_script(                            \
+            const u8 _reg_##TYPE{ leyla::script::detail::register_script(                            \
                 leyla::script::detail::string_hash()(#TYPE),                                                    \
                 &leyla::script::detail::create_script<TYPE>) }; }
         }
